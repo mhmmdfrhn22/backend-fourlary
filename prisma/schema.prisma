@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id        Int    @id @default(autoincrement())
+  nama_role String @unique
+  users     User[]
+}
+
+model User {
+  id           Int            @id @default(autoincrement())
+  username     String         @unique
+  password     String
+  role_id      Int
+  created_at   DateTime       @default(now())
+  uploadedFoto FotoGaleri[]   @relation("UserUploads")
+  kategoriFoto KategoriFoto[] @relation("UserCreatesKategori")
+  komentarFoto KomentarFoto[]
+  likeFoto     LikeFoto[]
+  posts        Post[]
+  role         Role           @relation(fields: [role_id], references: [id])
+
+  @@index([role_id], map: "User_role_id_fkey")
+}
+
+model Kategori {
+  id    Int    @id @default(autoincrement())
+  judul String
+  posts Post[]
+}
+
+model Post {
+  id          Int      @id @default(autoincrement())
+  judul       String
+  kategori_id Int
+  isi         String
+  user_id     Int
+  foto        String?
+  status      String   @default("draft")
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  kategori    Kategori @relation(fields: [kategori_id], references: [id])
+  user        User     @relation(fields: [user_id], references: [id])
+
+  @@index([kategori_id], map: "Post_kategori_id_fkey")
+  @@index([user_id], map: "Post_user_id_fkey")
+}
+
+model KategoriFoto {
+  id_kategori    Int          @id @default(autoincrement())
+  nama_kategori  String
+  tanggal_dibuat DateTime     @default(now())
+  dibuat_oleh    Int?
+  fotoGaleri     FotoGaleri[]
+  dibuatOleh     User?        @relation("UserCreatesKategori", fields: [dibuat_oleh], references: [id])
+
+  @@index([dibuat_oleh], map: "KategoriFoto_dibuat_oleh_fkey")
+}
+
+model FotoGaleri {
+  id_foto        Int            @id @default(autoincrement())
+  id_kategori    Int
+  url_foto       String
+  deskripsi      String?
+  tanggal_upload DateTime       @default(now())
+  diupload_oleh  Int?
+  uploader       User?          @relation("UserUploads", fields: [diupload_oleh], references: [id])
+  kategori       KategoriFoto   @relation(fields: [id_kategori], references: [id_kategori])
+  komentar       KomentarFoto[]
+  likes          LikeFoto[]
+
+  @@index([diupload_oleh], map: "FotoGaleri_diupload_oleh_fkey")
+  @@index([id_kategori], map: "FotoGaleri_id_kategori_fkey")
+}
+
+model KomentarFoto {
+  id_komentar      Int        @id @default(autoincrement())
+  id_foto          Int
+  id_user          Int
+  isi_komentar     String
+  tanggal_komentar DateTime   @default(now())
+  foto             FotoGaleri @relation(fields: [id_foto], references: [id_foto])
+  user             User       @relation(fields: [id_user], references: [id])
+
+  @@index([id_foto], map: "KomentarFoto_id_foto_fkey")
+  @@index([id_user], map: "KomentarFoto_id_user_fkey")
+}
+
+model LikeFoto {
+  id_like      Int        @id @default(autoincrement())
+  id_foto      Int
+  id_user      Int
+  tanggal_like DateTime   @default(now())
+  foto         FotoGaleri @relation(fields: [id_foto], references: [id_foto])
+  user         User       @relation(fields: [id_user], references: [id])
+
+  @@unique([id_foto, id_user])
+  @@index([id_user], map: "LikeFoto_id_user_fkey")
+}
+
+model GuruInfo {
+  id                Int     @id @default(autoincrement())
+  nama_guru         String
+  foto_guru         String?
+  mata_pelajaran    String
+  deskripsi         String?
+  link_sosial_media String?
+}
+
+model JurusanSekolah {
+  id_jurusan   Int                 @id @default(autoincrement())
+  nama_jurusan String
+  deskripsi    String?
+  created_at   DateTime            @default(now())
+  updated_at   DateTime            @updatedAt
+  pekerjaan    PembinatPekerjaan[]
+}
+
+model PembimbingProfile {
+  id_pembimbing   Int                 @id @default(autoincrement())
+  nama            String
+  nomor_wa        String?
+  link_wa         String?
+  foto_pembimbing String?
+  jabatan         String?
+  deskripsi       String?
+  created_at      DateTime            @default(now())
+  updated_at      DateTime            @updatedAt
+  pekerjaan       PembinatPekerjaan[]
+}
+
+model PembinatPekerjaan {
+  id_pekerjaan     Int                @id @default(autoincrement())
+  id_jurusan       Int?
+  id_pembimbing    Int?
+  nama_pekerjaan   String
+  gambar_pekerjaan String?
+  deskripsi        String?
+  created_at       DateTime           @default(now())
+  updated_at       DateTime           @updatedAt
+  jurusan          JurusanSekolah?    @relation(fields: [id_jurusan], references: [id_jurusan])
+  pembimbing       PembimbingProfile? @relation(fields: [id_pembimbing], references: [id_pembimbing])
+
+  @@index([id_jurusan], map: "PembinatPekerjaan_id_jurusan_fkey")
+  @@index([id_pembimbing], map: "PembinatPekerjaan_id_pembimbing_fkey")
+}

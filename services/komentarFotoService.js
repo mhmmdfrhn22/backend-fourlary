@@ -163,3 +163,25 @@ exports.deleteKomentar = async (id) => {
 
   return { success: true };
 };
+
+// ==============================
+// Edit komentar
+// ==============================
+exports.updateKomentar = async (id, isi_komentar) => {
+  // Periksa apakah komentar ada
+  const komentar = await prisma.komentarFoto.findUnique({
+    where: { id_komentar: Number(id) },
+  });
+
+  if (!komentar) throw new Error("Komentar tidak ditemukan");
+
+  // Update komentar
+  const updatedKomentar = await prisma.komentarFoto.update({
+    where: { id_komentar: Number(id) },
+    data: {
+      isi_komentar, // Update isi komentar
+    },
+  });
+
+  return updatedKomentar;
+};

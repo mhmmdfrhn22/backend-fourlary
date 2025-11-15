@@ -87,3 +87,23 @@ exports.deleteKomentar = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// ==============================
+// Edit komentar
+// ==============================
+exports.updateKomentar = async (req, res) => {
+  try {
+    const { id } = req.params; // ID komentar yang ingin diedit
+    const { isi_komentar } = req.body; // Isi komentar baru
+
+    // Panggil service untuk mengupdate komentar
+    const updatedKomentar = await komentarService.updateKomentar(id, isi_komentar);
+
+    res.json({
+      message: "Komentar berhasil diperbarui",
+      data: updatedKomentar,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};

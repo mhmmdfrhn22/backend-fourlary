@@ -151,12 +151,21 @@ exports.createKomentar = async (id_foto, id_user, isi_komentar, parent_id) => {
 // Hapus komentar
 // ==============================
 exports.deleteKomentar = async (id) => {
+  // Cari komentar berdasarkan id
   const existing = await prisma.komentarFoto.findUnique({
     where: { id_komentar: Number(id) },
   });
 
   if (!existing) throw new Error("Komentar tidak ditemukan");
 
+  // Hapus anak-anak komentar (balasan) terlebih dahulu
+  await prisma.komentarFoto.deleteMany({
+    where: {
+      parent_id: Number(id), // Menghapus semua komentar yang menjadi balasan
+    },
+  });
+
+  // Hapus komentar induk
   await prisma.komentarFoto.delete({
     where: { id_komentar: Number(id) },
   });

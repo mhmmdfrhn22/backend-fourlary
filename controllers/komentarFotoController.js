@@ -1,7 +1,8 @@
-// controllers/komentarController.js
 const komentarService = require("../services/komentarFotoService");
 
-// ✅ GET semua komentar (opsional filter berdasarkan uploader foto)
+// ==============================
+// GET semua komentar
+// ==============================
 exports.getAllKomentar = async (req, res) => {
   try {
     const { uploader_id } = req.query;
@@ -12,12 +13,12 @@ exports.getAllKomentar = async (req, res) => {
   }
 };
 
-// ✅ Hitung jumlah komentar yang diterima user
+// ==============================
+// Hitung komentar diterima user
+// ==============================
 exports.getKomentarCountByUser = async (req, res) => {
   try {
     const { user_id } = req.params;
-    if (!user_id) return res.status(400).json({ message: "user_id wajib diisi" });
-
     const result = await komentarService.getKomentarCountByUser(user_id);
     res.json(result);
   } catch (err) {
@@ -25,13 +26,12 @@ exports.getKomentarCountByUser = async (req, res) => {
   }
 };
 
-// ✅ Komentar untuk semua foto milik user (khusus uploader)
+// ==============================
+// Komentar untuk semua foto uploader
+// ==============================
 exports.getKomentarByUploader = async (req, res) => {
   try {
     const { user_id } = req.query;
-    if (!user_id)
-      return res.status(400).json({ message: "Parameter user_id wajib diisi" });
-
     const result = await komentarService.getKomentarByUploader(user_id);
     res.json(result);
   } catch (err) {
@@ -39,7 +39,9 @@ exports.getKomentarByUploader = async (req, res) => {
   }
 };
 
-// ✅ Komentar berdasarkan foto
+// ==============================
+// Komentar berdasarkan foto (nested)
+// ==============================
 exports.getKomentarByFoto = async (req, res) => {
   try {
     const { id_foto } = req.params;
@@ -50,15 +52,20 @@ exports.getKomentarByFoto = async (req, res) => {
   }
 };
 
-// ✅ Tambah komentar
+// ==============================
+// Tambah komentar (support reply)
+// ==============================
 exports.createKomentar = async (req, res) => {
   try {
-    const { id_foto, id_user, isi_komentar } = req.body;
-    if (!id_foto || !id_user || !isi_komentar) {
-      return res.status(400).json({ message: "Semua data harus diisi" });
-    }
+    const { id_foto, id_user, isi_komentar, parent_id } = req.body;
 
-    const newKomentar = await komentarService.createKomentar(id_foto, id_user, isi_komentar);
+    const newKomentar = await komentarService.createKomentar(
+      id_foto,
+      id_user,
+      isi_komentar,
+      parent_id
+    );
+
     res.status(201).json({
       message: "Komentar berhasil ditambahkan",
       data: newKomentar,
@@ -68,16 +75,15 @@ exports.createKomentar = async (req, res) => {
   }
 };
 
-// ✅ Hapus komentar
+// ==============================
+// Hapus komentar
+// ==============================
 exports.deleteKomentar = async (req, res) => {
   try {
     const { id } = req.params;
     const result = await komentarService.deleteKomentar(id);
     res.json({ message: "Komentar berhasil dihapus", result });
   } catch (err) {
-    if (err.message === "Komentar tidak ditemukan") {
-      return res.status(404).json({ message: err.message });
-    }
     res.status(500).json({ message: err.message });
   }
 };

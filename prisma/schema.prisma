@@ -39,7 +39,7 @@ model Post {
   id          Int      @id @default(autoincrement())
   judul       String
   kategori_id Int
-  isi         String
+  isi         String   @db.Text 
   user_id     Int
   foto        String?
   status      String   @default("draft")
@@ -80,17 +80,25 @@ model FotoGaleri {
 }
 
 model KomentarFoto {
-  id_komentar      Int        @id @default(autoincrement())
+  id_komentar      Int            @id @default(autoincrement())
   id_foto          Int
   id_user          Int
   isi_komentar     String
-  tanggal_komentar DateTime   @default(now())
-  foto             FotoGaleri @relation(fields: [id_foto], references: [id_foto])
-  user             User       @relation(fields: [id_user], references: [id])
+  tanggal_komentar DateTime       @default(now())
 
-  @@index([id_foto], map: "KomentarFoto_id_foto_fkey")
-  @@index([id_user], map: "KomentarFoto_id_user_fkey")
+  // Tambahan penting agar bisa reply komentar
+  parent_id        Int?           // komentar induk
+  parent           KomentarFoto?  @relation("ReplyRelation", fields: [parent_id], references: [id_komentar])
+  replies          KomentarFoto[] @relation("ReplyRelation")
+
+  foto             FotoGaleri     @relation(fields: [id_foto], references: [id_foto])
+  user             User           @relation(fields: [id_user], references: [id])
+
+  @@index([id_foto])
+  @@index([id_user])
+  @@index([parent_id])
 }
+
 
 model LikeFoto {
   id_like      Int        @id @default(autoincrement())
@@ -129,7 +137,7 @@ model PembimbingProfile {
   link_wa         String?
   foto_pembimbing String?
   jabatan         String?
-  deskripsi       String?
+  deskripsi       String?             @db.Text
   created_at      DateTime            @default(now())
   updated_at      DateTime            @updatedAt
   pekerjaan       PembinatPekerjaan[]
@@ -141,7 +149,7 @@ model PembinatPekerjaan {
   id_pembimbing    Int?
   nama_pekerjaan   String
   gambar_pekerjaan String?
-  deskripsi        String?
+  deskripsi        String?            @db.Text
   created_at       DateTime           @default(now())
   updated_at       DateTime           @updatedAt
   jurusan          JurusanSekolah?    @relation(fields: [id_jurusan], references: [id_jurusan])

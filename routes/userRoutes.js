@@ -32,15 +32,15 @@ router.post('/login',
 router.post('/register',
   [
     body('username').isLength({ min: 4 }).withMessage('Minimal 4 karakter'),
-    body('email').isEmail().withMessage('Email harus valid'), // Validasi email
-    body('confirmEmail').isEmail().withMessage('Konfirmasi email harus valid'), // Validasi konfirmasi email
+    body('email').isEmail().withMessage('Email harus valid'),
+    body('confirmEmail').isEmail().withMessage('Konfirmasi email harus valid'),
     body('password').isLength({ min: 6 }).withMessage('Minimal 6 karakter'),
     body('role_id').isInt().withMessage('role_id harus angka')
   ],
   (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-    userController.createUser(req, res);
+    userController.createUser(req, res);  // Menggunakan Brevo API untuk kirim OTP
   }
 );
 
@@ -53,7 +53,7 @@ router.post('/verify-email',
   (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-    userController.verifyEmailOtp(req, res);
+    userController.verifyEmailOtp(req, res);  // Menggunakan Brevo untuk validasi OTP
   }
 );
 
@@ -65,7 +65,7 @@ router.post('/forgot-password',
   (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-    userController.forgotPassword(req, res);
+    userController.forgotPassword(req, res);  // Menggunakan Brevo untuk kirim OTP
   }
 );
 
@@ -80,7 +80,7 @@ router.post('/reset-password',
   (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-    userController.resetPassword(req, res);
+    userController.resetPassword(req, res);  // Menggunakan Brevo untuk kirim OTP
   }
 );
 

@@ -2,8 +2,9 @@ const userService = require('../services/userService');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const jwtSecret = process.env.JWT_SECRET || 'rahasia';
-const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const { Resend } = require('resend'); // Menggunakan Resend API
+const resend = new Resend(process.env.RESEND_API_KEY); // Pastikan Resend API key ada di env
 
 // ✅ Register user baru
 exports.createUser = async (req, res) => {
@@ -35,7 +36,7 @@ exports.createUser = async (req, res) => {
     // Simpan OTP dan waktu kedaluwarsa di database
     await userService.saveOtpForUser(result.id, otp, otpExpiry);
 
-    // Kirim OTP ke email
+    // Kirim OTP ke email menggunakan Resend API
     sendOtpEmail(email, otp);
 
     res.status(201).json({ id: result.id, username, email, role_id, message: 'Verifikasi email telah dikirim, cek email Anda untuk verifikasi.' });
@@ -44,29 +45,17 @@ exports.createUser = async (req, res) => {
   }
 };
 
-// Fungsi untuk mengirim OTP ke email
+// Fungsi untuk mengirim OTP ke email menggunakan Resend API
 const sendOtpEmail = (email, otp) => {
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER, // Email pengirim
-      pass: process.env.EMAIL_PASS, // Password email pengirim
-    },
-  });
-
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: email,
+  resend.emails.send({
+    from: "Fourlary <noreply@farhanfym.my.id>", // Gunakan email yang sudah diverifikasi di Resend
+    to: email,  // Email penerima
     subject: 'Verifikasi Email - OTP',
-    text: `Kode OTP Anda untuk verifikasi email adalah: ${otp}. Kode ini berlaku selama 15 menit.`,
-  };
-
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.log('Error sending email: ', error);
-    } else {
-      console.log('OTP email sent: ' + info.response);
-    }
+    html: `<p>OTP untuk verifikasi email Anda adalah: <strong>${otp}</strong>.</p><p>OTP ini berlaku selama 15 menit.</p>`,
+  }).then(response => {
+    console.log('OTP email sent: ', response);
+  }).catch(error => {
+    console.error('Error sending email: ', error);
   });
 };
 
@@ -133,7 +122,7 @@ exports.forgotPassword = async (req, res) => {
     // Simpan OTP dan waktu kedaluwarsa di database
     await userService.saveOtpForUser(user.id, otp, otpExpiry);
 
-    // Kirim OTP ke email
+    // Kirim OTP ke email menggunakan Resend API
     sendOtpEmail(email, otp);
 
     res.json({ message: 'OTP untuk reset password telah dikirim ke email Anda.' });

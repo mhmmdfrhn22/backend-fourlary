@@ -4,21 +4,22 @@ const userController = require('../controllers/userController');
 const { body, validationResult } = require('express-validator');
 const verifyToken = require('../middleware/verifyToken');
 const authMiddleware = require('../middleware/authMiddleware');
+const verifyOtpMiddleware = require('../middleware/verifyOtpMiddleware');
 
+// Statistik user
 router.get("/stats", userController.getUserStats);
 
-// Count tim publikasi
+// Hitung tim publikasi
 router.get('/publikasi/count', userController.getPublikasiTeamCount);
 
-
-// Count user biasa
+// Hitung user biasa
 router.get('/count', userController.getUsersCount);
 
 // User Login
 router.post('/login',
   [
-    body('username').isLength({ min: 4 }).withMessage('Minimal 4 karakter'),
-    body('password').isLength({ min: 6 }).withMessage('Minimal 6 karakter'),
+    body('email').isEmail().withMessage('Email harus valid'), // Validasi email
+    body('password').isLength({ min: 6 }).withMessage('Minimal 6 karakter'), // Validasi password
   ],
   (req, res) => {
     const errors = validationResult(req);
@@ -31,6 +32,8 @@ router.post('/login',
 router.post('/register',
   [
     body('username').isLength({ min: 4 }).withMessage('Minimal 4 karakter'),
+    body('email').isEmail().withMessage('Email harus valid'), // Validasi email
+    body('confirmEmail').isEmail().withMessage('Konfirmasi email harus valid'), // Validasi konfirmasi email
     body('password').isLength({ min: 6 }).withMessage('Minimal 6 karakter'),
     body('role_id').isInt().withMessage('role_id harus angka')
   ],
@@ -38,6 +41,46 @@ router.post('/register',
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     userController.createUser(req, res);
+  }
+);
+
+// Verifikasi email dengan OTP
+router.post('/verify-email',
+  [
+    body('otp').isLength({ min: 6 }).withMessage('OTP harus terdiri dari 6 karakter'),
+    body('userId').isInt().withMessage('userId harus angka')
+  ],
+  (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    userController.verifyEmailOtp(req, res);
+  }
+);
+
+// Forgot password - Send OTP
+router.post('/forgot-password',
+  [
+    body('email').isEmail().withMessage('Email harus valid'),
+  ],
+  (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    userController.forgotPassword(req, res);
+  }
+);
+
+// Reset password with OTP
+router.post('/reset-password',
+  [
+    body('otp').isLength({ min: 6 }).withMessage('OTP harus terdiri dari 6 karakter'),
+    body('newPassword').isLength({ min: 6 }).withMessage('Password baru minimal 6 karakter'),
+    body('userId').isInt().withMessage('userId harus angka')
+  ],
+  verifyOtpMiddleware,  // Verifikasi OTP sebelum mereset password
+  (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    userController.resetPassword(req, res);
   }
 );
 

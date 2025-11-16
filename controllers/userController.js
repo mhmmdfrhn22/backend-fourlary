@@ -2,30 +2,82 @@ const userService = require('../services/userService');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const jwtSecret = process.env.JWT_SECRET || 'rahasia';
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 
 // ✅ Register user baru
 exports.createUser = async (req, res) => {
   try {
-    const { username, password, role_id } = req.body;
-    if (!username || !password || !role_id)
+    const { username, email, password, confirmEmail, role_id } = req.body;
+
+    if (!username || !email || !password || !confirmEmail || !role_id)
       return res.status(400).json({ error: 'Semua field wajib diisi' });
 
-    const hashedPassword = bcrypt.hashSync(password, 8);
-    const result = await userService.createUser(username, hashedPassword, role_id);
+    // Validasi apakah email dan konfirmasi email sama
+    if (email !== confirmEmail)
+      return res.status(400).json({ error: 'Email dan konfirmasi email tidak cocok' });
 
-    res.status(201).json({ id: result.insertId, username, role_id });
+    // Cek apakah email sudah terdaftar
+    const existingUser = await userService.getUserByEmail(email);
+    if (existingUser) return res.status(400).json({ error: 'Email sudah terdaftar.' });
+
+    // Hash password
+    const hashedPassword = bcrypt.hashSync(password, 8);
+
+    // Simpan user terlebih dahulu dengan status email belum diverifikasi
+    const result = await userService.createUser(username, email, hashedPassword, role_id);
+
+    // Generate OTP untuk verifikasi email
+    const otp = crypto.randomBytes(3).toString('hex').toUpperCase(); // Generate OTP 6 karakter
+    const otpExpiry = new Date();
+    otpExpiry.setMinutes(otpExpiry.getMinutes() + 15); // OTP berlaku 15 menit
+
+    // Simpan OTP dan waktu kedaluwarsa di database
+    await userService.saveOtpForUser(result.id, otp, otpExpiry);
+
+    // Kirim OTP ke email
+    sendOtpEmail(email, otp);
+
+    res.status(201).json({ id: result.id, username, email, role_id, message: 'Verifikasi email telah dikirim, cek email Anda untuk verifikasi.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
+// Fungsi untuk mengirim OTP ke email
+const sendOtpEmail = (email, otp) => {
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER, // Email pengirim
+      pass: process.env.EMAIL_PASS, // Password email pengirim
+    },
+  });
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: 'Verifikasi Email - OTP',
+    text: `Kode OTP Anda untuk verifikasi email adalah: ${otp}. Kode ini berlaku selama 15 menit.`,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.log('Error sending email: ', error);
+    } else {
+      console.log('OTP email sent: ' + info.response);
+    }
+  });
+};
+
 // ✅ Login user
 exports.loginUser = async (req, res) => {
   try {
-    const { username, password } = req.body;
-    const user = await userService.getUserByUsername(username);
+    const { email, password } = req.body;
+    const user = await userService.getUserByEmail(email);
 
     if (!user) return res.status(401).json({ error: 'User tidak ditemukan.' });
+    if (!user.isVerified) return res.status(401).json({ error: 'Email belum terverifikasi.' });
     if (!bcrypt.compareSync(password, user.password))
       return res.status(401).json({ error: 'Password salah.' });
 
@@ -40,6 +92,83 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// ✅ Verify Email OTP
+exports.verifyEmailOtp = async (req, res) => {
+  try {
+    const { otp, userId } = req.body;
+
+    // Validasi OTP
+    const user = await userService.getUserById(userId);
+    if (!user) return res.status(404).json({ error: 'User tidak ditemukan.' });
+
+    if (user.otpCode !== otp)
+      return res.status(400).json({ error: 'OTP tidak valid.' });
+
+    if (new Date() > user.otpExpires)
+      return res.status(400).json({ error: 'OTP telah kadaluarsa.' });
+
+    // Jika OTP valid, update status verifikasi
+    await userService.verifyEmail(userId);
+
+    res.json({ message: 'Email berhasil diverifikasi.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ✅ Forgot password - Send OTP
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await userService.getUserByEmail(email);
+    if (!user) return res.status(404).json({ error: 'Email tidak ditemukan.' });
+
+    // Generate OTP untuk reset password
+    const otp = crypto.randomBytes(3).toString('hex').toUpperCase(); // Generate OTP 6 karakter
+    const otpExpiry = new Date();
+    otpExpiry.setMinutes(otpExpiry.getMinutes() + 15); // OTP berlaku 15 menit
+
+    // Simpan OTP dan waktu kedaluwarsa di database
+    await userService.saveOtpForUser(user.id, otp, otpExpiry);
+
+    // Kirim OTP ke email
+    sendOtpEmail(email, otp);
+
+    res.json({ message: 'OTP untuk reset password telah dikirim ke email Anda.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ✅ Reset password with OTP
+exports.resetPassword = async (req, res) => {
+  try {
+    const { otp, newPassword, userId } = req.body;
+
+    // Validasi OTP
+    const user = await userService.getUserById(userId);
+    if (!user) return res.status(404).json({ error: 'User tidak ditemukan.' });
+
+    if (user.otpCode !== otp)
+      return res.status(400).json({ error: 'OTP tidak valid.' });
+
+    if (new Date() > user.otpExpires)
+      return res.status(400).json({ error: 'OTP telah kadaluarsa.' });
+
+    // Hash password baru
+    const hashedPassword = bcrypt.hashSync(newPassword, 8);
+
+    // Update password user
+    await userService.updatePassword(userId, hashedPassword);
+
+    res.json({ message: 'Password berhasil direset.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 
 // ✅ Ambil semua user
 exports.getAllUsers = async (req, res) => {

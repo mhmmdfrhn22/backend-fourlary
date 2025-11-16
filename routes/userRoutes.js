@@ -69,6 +69,22 @@ router.post('/forgot-password',
   }
 );
 
+// Rute untuk mendapatkan userId berdasarkan email
+router.post('/user-by-email', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    // Cari user berdasarkan email
+    const user = await userService.getUserByEmail(email);
+    if (!user) return res.status(404).json({ error: 'User tidak ditemukan.' });
+
+    res.json({ userId: user.id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // Reset password dengan OTP tanpa memerlukan token (karena user belum login)
 router.post('/reset-password',
   [

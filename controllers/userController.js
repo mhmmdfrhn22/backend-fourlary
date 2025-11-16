@@ -131,7 +131,7 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-// ✅ Reset password with OTP
+// ✅ Reset password with OTP tanpa token karena pengguna belum login
 exports.resetPassword = async (req, res) => {
   try {
     const { otp, newPassword, userId } = req.body;
@@ -157,6 +157,7 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 
 // ✅ Ambil semua user

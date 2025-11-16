@@ -57,32 +57,32 @@ router.post('/verify-email',
   }
 );
 
-// Forgot password - Send OTP
-router.post('/forgot-password',
+// Hapus penggunaan authMiddleware atau verifyToken untuk forgot-password dan reset-password
+router.post('/forgot-password', 
   [
     body('email').isEmail().withMessage('Email harus valid'),
-  ],
+  ], 
   (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-    userController.forgotPassword(req, res);  // Menggunakan Brevo untuk kirim OTP
+    userController.forgotPassword(req, res);  // Tidak perlu token di sini
   }
 );
 
-// Reset password with OTP
+// Reset password dengan OTP tanpa memerlukan token (karena user belum login)
 router.post('/reset-password',
   [
     body('otp').isLength({ min: 6 }).withMessage('OTP harus terdiri dari 6 karakter'),
     body('newPassword').isLength({ min: 6 }).withMessage('Password baru minimal 6 karakter'),
     body('userId').isInt().withMessage('userId harus angka')
   ],
-  verifyOtpMiddleware,  // Verifikasi OTP sebelum mereset password
   (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-    userController.resetPassword(req, res);  // Menggunakan Brevo untuk kirim OTP
+    userController.resetPassword(req, res);  // Tidak perlu token di sini
   }
 );
+
 
 // Get all users
 router.get('/', verifyToken, userController.getAllUsers);

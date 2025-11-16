@@ -3,8 +3,8 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const jwtSecret = process.env.JWT_SECRET || 'rahasia';
 const crypto = require('crypto');
-const { Resend } = require('resend'); // Menggunakan Resend API
-const resend = new Resend(process.env.RESEND_API_KEY); // Pastikan Resend API key ada di env
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY); // Pastikan API key sudah benar
 
 // ✅ Register user baru
 exports.createUser = async (req, res) => {

@@ -57,7 +57,7 @@ router.post('/verify-email',
   }
 );
 
-// Hapus penggunaan authMiddleware atau verifyToken untuk forgot-password dan reset-password
+// Endpoint untuk forgot-password
 router.post('/forgot-password', 
   [
     body('email').isEmail().withMessage('Email harus valid'),
@@ -65,37 +65,21 @@ router.post('/forgot-password',
   (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-    userController.forgotPassword(req, res);  // Tidak perlu token di sini
+    userController.forgotPassword(req, res);
   }
 );
 
-// Rute untuk mendapatkan userId berdasarkan email
-router.post('/user-by-email', async (req, res) => {
-  try {
-    const { email } = req.body;
-    
-    // Cari user berdasarkan email
-    const user = await userService.getUserByEmail(email);
-    if (!user) return res.status(404).json({ error: 'User tidak ditemukan.' });
-
-    res.json({ userId: user.id });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-
-// Reset password dengan OTP tanpa memerlukan token (karena user belum login)
+// Endpoint untuk reset-password
 router.post('/reset-password',
   [
-    body('otp').isLength({ min: 6 }).withMessage('OTP harus terdiri dari 6 karakter'),
     body('newPassword').isLength({ min: 6 }).withMessage('Password baru minimal 6 karakter'),
-    body('userId').isInt().withMessage('userId harus angka')
+    body('confirmPassword').isLength({ min: 6 }).withMessage('Konfirmasi password harus minimal 6 karakter'),
+    body('token').notEmpty().withMessage('Token harus ada')
   ],
   (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-    userController.resetPassword(req, res);  // Tidak perlu token di sini
+    userController.resetPassword(req, res);
   }
 );
 

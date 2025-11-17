@@ -5,6 +5,7 @@ const jwtSecret = process.env.JWT_SECRET || 'rahasia';
 const crypto = require('crypto');
 const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY); // Pastikan API key sudah benar
+const { sendResetPasswordEmail } = require('../services/emailService');
 
 // ✅ Register user baru
 exports.createUser = async (req, res) => {
@@ -45,13 +46,15 @@ exports.createUser = async (req, res) => {
   }
 };
 
-// Fungsi untuk mengirim OTP ke email menggunakan Resend API
-const sendOtpEmail = (email, otp) => {
+// Fungsi untuk mengirim OTP dan token JWT ke email
+const sendOtpEmail = (email, otp, token) => {
   resend.emails.send({
     from: "Fourlary <noreply@farhanfym.my.id>", // Gunakan email yang sudah diverifikasi di Resend
     to: email,  // Email penerima
-    subject: 'Verifikasi Email - OTP',
-    html: `<p>OTP untuk verifikasi email Anda adalah: <strong>${otp}</strong>.</p><p>OTP ini berlaku selama 15 menit.</p>`,
+    subject: 'Reset Password - OTP',
+    html: `<p>OTP untuk reset password Anda adalah: <strong>${otp}</strong>.</p>
+           <p>Gunakan token berikut untuk melanjutkan reset password: <strong>${token}</strong></p>
+           <p>Token ini berlaku selama 15 menit.</p>`,
   }).then(response => {
     console.log('OTP email sent: ', response);
   }).catch(error => {
@@ -106,45 +109,50 @@ exports.verifyEmailOtp = async (req, res) => {
   }
 };
 
-// ✅ Forgot password - Send OTP
+// ✅ Forgot password - Send OTP dan JWT Token
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
+    // Cari user berdasarkan email
     const user = await userService.getUserByEmail(email);
     if (!user) return res.status(404).json({ error: 'Email tidak ditemukan.' });
 
-    // Generate OTP untuk reset password
-    const otp = crypto.randomBytes(3).toString('hex').toUpperCase(); // Generate OTP 6 karakter
-    const otpExpiry = new Date();
-    otpExpiry.setMinutes(otpExpiry.getMinutes() + 15); // OTP berlaku 15 menit
+    // Generate JWT untuk reset password
+    const token = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: '15m' });
 
-    // Simpan OTP dan waktu kedaluwarsa di database
-    await userService.saveOtpForUser(user.id, otp, otpExpiry);
+    // Kirim token JWT untuk reset password ke email pengguna
+    await sendResetPasswordEmail(email, token);
 
-    // Kirim OTP ke email menggunakan Resend API
-    sendOtpEmail(email, otp);
-
-    res.json({ message: 'OTP untuk reset password telah dikirim ke email Anda.' });
+    res.json({ message: 'Email untuk reset password telah dikirim.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// ✅ Reset password with OTP tanpa token karena pengguna belum login
+// ✅ Reset Password tanpa OTP, hanya membutuhkan token dan password baru
 exports.resetPassword = async (req, res) => {
   try {
-    const { otp, newPassword, userId } = req.body;
+    const { newPassword, confirmPassword, token } = req.body;
 
-    // Validasi OTP
+    // Validasi konfirmasi password
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: 'Password dan konfirmasi password tidak cocok.' });
+    }
+
+    // Verifikasi token JWT untuk mendapatkan userId
+    let decoded;
+    try {
+      decoded = jwt.verify(token, jwtSecret); // Token JWT yang dikirimkan melalui email
+    } catch (err) {
+      return res.status(400).json({ error: 'Token tidak valid atau telah kedaluwarsa.' });
+    }
+
+    const userId = decoded.userId;
+
+    // Cari user berdasarkan userId yang terdapat dalam token
     const user = await userService.getUserById(userId);
     if (!user) return res.status(404).json({ error: 'User tidak ditemukan.' });
-
-    if (user.otpCode !== otp)
-      return res.status(400).json({ error: 'OTP tidak valid.' });
-
-    if (new Date() > user.otpExpires)
-      return res.status(400).json({ error: 'OTP telah kadaluarsa.' });
 
     // Hash password baru
     const hashedPassword = bcrypt.hashSync(newPassword, 8);
@@ -157,6 +165,7 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 
 

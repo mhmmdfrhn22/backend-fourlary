@@ -47,7 +47,7 @@ exports.createUser = async (req, res) => {
 };
 
 // Fungsi untuk mengirim OTP dan token JWT ke email
-const sendOtpEmail = (email, otp, token) => {
+const sendOtpEmail = (email, otp) => {
   resend.emails.send({
     from: "Fourlary <noreply@farhanfym.my.id>",
     to: email,

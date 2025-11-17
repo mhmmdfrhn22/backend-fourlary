@@ -8,6 +8,8 @@ const resend = new Resend(process.env.RESEND_API_KEY); // Pastikan API key sudah
 const { sendResetPasswordEmail } = require('../services/emailService');
 
 // ✅ Register user baru
+// ✅ Register user baru atau kirim OTP jika email sudah terdaftar namun belum diverifikasi
+// ✅ Register user baru atau kirim OTP jika email sudah terdaftar namun belum diverifikasi
 exports.createUser = async (req, res) => {
   try {
     const { username, email, password, confirmEmail, role_id } = req.body;
@@ -21,18 +23,39 @@ exports.createUser = async (req, res) => {
 
     // Cek apakah email sudah terdaftar
     const existingUser = await userService.getUserByEmail(email);
-    if (existingUser) return res.status(400).json({ error: 'Email sudah terdaftar.' });
+
+    if (existingUser) {
+      if (!existingUser.isVerified) {
+        // Jika email sudah terdaftar tapi belum diverifikasi, kirimkan OTP lagi
+        const otp = crypto.randomBytes(3).toString('hex').toUpperCase(); // Generate OTP 6 karakter
+        const otpExpiry = new Date();
+        otpExpiry.setMinutes(otpExpiry.getMinutes() + 15); // OTP berlaku 15 menit
+
+        // Simpan OTP dan waktu kedaluwarsa di database
+        await userService.saveOtpForUser(existingUser.id, otp, otpExpiry);
+
+        // Kirim OTP ke email menggunakan Resend API
+        sendOtpEmail(email, otp);
+
+        return res.status(200).json({
+          message: 'OTP baru telah dikirim, cek email Anda untuk verifikasi.',
+          id: existingUser.id // Kirimkan ID pengguna yang sudah ada
+        });
+      } else {
+        return res.status(400).json({ error: 'Email sudah terdaftar dan sudah diverifikasi.' });
+      }
+    }
 
     // Hash password
     const hashedPassword = bcrypt.hashSync(password, 8);
 
-    // Simpan user terlebih dahulu dengan status email belum diverifikasi
+    // Simpan user baru dengan status email belum diverifikasi
     const result = await userService.createUser(username, email, hashedPassword, role_id);
 
     // Generate OTP untuk verifikasi email
-    const otp = crypto.randomBytes(3).toString('hex').toUpperCase(); // Generate OTP 6 karakter
+    const otp = crypto.randomBytes(3).toString('hex').toUpperCase();
     const otpExpiry = new Date();
-    otpExpiry.setMinutes(otpExpiry.getMinutes() + 15); // OTP berlaku 15 menit
+    otpExpiry.setMinutes(otpExpiry.getMinutes() + 15);
 
     // Simpan OTP dan waktu kedaluwarsa di database
     await userService.saveOtpForUser(result.id, otp, otpExpiry);
@@ -45,6 +68,7 @@ exports.createUser = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 // Fungsi untuk mengirim OTP dan token JWT ke email
 const sendOtpEmail = (email, otp) => {
@@ -127,7 +151,7 @@ exports.loginUser = async (req, res) => {
     const user = await userService.getUserByEmail(email);
 
     if (!user) return res.status(401).json({ error: 'User tidak ditemukan.' });
-    if (!user.isVerified) return res.status(401).json({ error: 'Email belum terverifikasi.' });
+    if (!user.isVerified) return res.status(401).json({ error: 'Email belum terverifikasi. Silakan verifikasi email Anda terlebih dahulu.' });
     if (!bcrypt.compareSync(password, user.password))
       return res.status(401).json({ error: 'Password salah.' });
 

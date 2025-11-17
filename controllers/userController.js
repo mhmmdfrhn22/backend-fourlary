@@ -49,16 +49,73 @@ exports.createUser = async (req, res) => {
 // Fungsi untuk mengirim OTP dan token JWT ke email
 const sendOtpEmail = (email, otp, token) => {
   resend.emails.send({
-    from: "Fourlary <noreply@farhanfym.my.id>", // Gunakan email yang sudah diverifikasi di Resend
-    to: email,  // Email penerima
+    from: "Fourlary <noreply@farhanfym.my.id>",
+    to: email,
     subject: 'Reset Password - OTP',
-    html: `<p>OTP untuk reset password Anda adalah: <strong>${otp}</strong>.</p>
-           <p>Gunakan token berikut untuk melanjutkan reset password: <strong>${token}</strong></p>
-           <p>Token ini berlaku selama 15 menit.</p>`,
-  }).then(response => {
-    console.log('OTP email sent: ', response);
-  }).catch(error => {
-    console.error('Error sending email: ', error);
+    html: `
+      <html>
+        <head>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 0;
+              background-color: #f4f4f4;
+              color: #333;
+            }
+            .container {
+              width: 100%;
+              max-width: 600px;
+              margin: 20px auto;
+              padding: 20px;
+              background-color: #ffffff;
+              border-radius: 8px;
+              box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            }
+            h2 {
+              color: #333;
+              text-align: center;
+            }
+            .content {
+              font-size: 16px;
+              line-height: 1.5;
+              margin-bottom: 20px;
+            }
+            .otp {
+              font-size: 18px;
+              font-weight: bold;
+              color: #ff6600;
+              background-color: #fff2e6;
+              padding: 10px;
+              border-radius: 4px;
+              display: inline-block;
+              margin-top: 10px;
+            }
+            footer {
+              text-align: center;
+              margin-top: 20px;
+              font-size: 12px;
+              color: #999;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h2>Reset Password Request</h2>
+            <div class="content">
+              <p>Dear User,</p>
+              <p>We received a request to reset your password. To proceed, please use the following OTP:</p>
+              <div class="otp">${otp}</div>
+              <p>This OTP is valid for the next 15 minutes.</p>
+            </div>
+            <footer>
+              <p>Thank you for using Fourlary.</p>
+              <p>If you didn't request a password reset, please ignore this email.</p>
+            </footer>
+          </div>
+        </body>
+      </html>
+    `,
   });
 };
 

@@ -51,73 +51,74 @@ const sendOtpEmail = (email, otp) => {
   resend.emails.send({
     from: "Fourlary <noreply@farhanfym.my.id>",
     to: email,
-    subject: 'Reset Password - OTP',
+    subject: 'Verifikasi Email - OTP',
     html: `
       <html>
         <head>
           <style>
             body {
-              font-family: Arial, sans-serif;
-              margin: 0;
-              padding: 0;
+              font-family: 'Arial', sans-serif;
               background-color: #f4f4f4;
-              color: #333;
+              padding: 20px;
             }
             .container {
-              width: 100%;
               max-width: 600px;
-              margin: 20px auto;
-              padding: 20px;
+              margin: 0 auto;
               background-color: #ffffff;
+              padding: 20px;
               border-radius: 8px;
               box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             }
             h2 {
-              color: #333;
+              color: #0046d1;
               text-align: center;
+              font-size: 22px;
             }
-            .content {
+            p {
+              color: #333;
               font-size: 16px;
               line-height: 1.5;
-              margin-bottom: 20px;
             }
             .otp {
-              font-size: 18px;
+              font-size: 24px;
               font-weight: bold;
-              color: #ff6600;
-              background-color: #fff2e6;
-              padding: 10px;
-              border-radius: 4px;
-              display: inline-block;
-              margin-top: 10px;
-            }
-            footer {
+              color: #0046d1;
+              background-color: #f2f7ff;
+              padding: 12px;
+              border-radius: 6px;
               text-align: center;
-              margin-top: 20px;
-              font-size: 12px;
+              display: inline-block;
+              margin: 20px auto;
+            }
+            .footer {
+              text-align: center;
+              font-size: 14px;
               color: #999;
+              margin-top: 20px;
             }
           </style>
         </head>
         <body>
           <div class="container">
-            <h2>Reset Password Request</h2>
-            <div class="content">
-              <p>Dear User,</p>
-              <p>We received a request to reset your password. To proceed, please use the following OTP:</p>
-              <div class="otp">${otp}</div>
-              <p>This OTP is valid for the next 15 minutes.</p>
+            <h2>Verifikasi Email</h2>
+            <p>Hi,</p>
+            <p>Terima kasih telah mendaftar. Berikut adalah kode OTP untuk verifikasi email Anda:</p>
+            <div class="otp">${otp}</div>
+            <p>OTP ini berlaku selama 15 menit. Setelah itu, Anda perlu meminta kode baru.</p>
+            <div class="footer">
+              <p>Jika Anda tidak melakukan pendaftaran, abaikan email ini.</p>
             </div>
-            <footer>
-              <p>Thank you for using Fourlary.</p>
-              <p>If you didn't request a password reset, please ignore this email.</p>
-            </footer>
           </div>
         </body>
       </html>
-    `,
+    `
+  }).then(response => {
+    console.log('OTP email sent: ', response);
+  }).catch(error => {
+    console.error('Error sending email: ', error);
   });
 };
+
 
 // ✅ Login user
 exports.loginUser = async (req, res) => {

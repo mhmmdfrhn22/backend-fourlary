@@ -151,3 +151,10 @@ exports.updatePassword = async (userId, hashedPassword) => {
     },
   });
 };
+
+// ✅ Ambil user berdasarkan email
+exports.getUserByEmail = async (email) => {
+  return await prisma.user.findUnique({
+    where: { email },
+  });
+};

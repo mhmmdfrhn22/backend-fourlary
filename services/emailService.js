@@ -30,7 +30,7 @@ const sendResetPasswordEmail = async (email, token) => {
         font-size: 22px;
       }
       p {
-        color: #ffffff; /* Changed text color to white */
+        color: #000000; /* Changed text color to black */
         font-size: 16px;
         line-height: 1.5;
       }
@@ -40,8 +40,8 @@ const sendResetPasswordEmail = async (email, token) => {
         max-width: 200px;
         margin: 20px auto;
         padding: 15px;
-        background-color: #0046d1;
-        color: white;
+        background-color: #000000; /* Changed button color to black */
+        color: white; /* Text color inside the button */
         text-align: center;
         font-size: 18px;
         font-weight: bold;
